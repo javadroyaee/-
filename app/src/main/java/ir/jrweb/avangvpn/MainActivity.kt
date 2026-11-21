@@ -180,7 +180,7 @@ class MainActivity : AppCompatActivity() {
 
     private suspend fun updateSubscription(subUrl: String) = withContext(Dispatchers.IO) {
         try {
-            val request = Request.Builder().url(subUrl).header("User-Agent", "AvangVPN/2.1").build()
+            val request = Request.Builder().url(subUrl).header("User-Agent", "AvangVPN/2.2").build()
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@use
                 parseSubscriptionUserInfo(response.header("Subscription-Userinfo") ?: "")
@@ -300,10 +300,11 @@ class MainActivity : AppCompatActivity() {
     private fun launchVpnService(config: VpnConfig) {
         try {
             val jsonConfig = ConfigConverter.buildXrayConfig(config)
-            ContextCompat.startForegroundService(this, Intent(this, AvangVpnService::class.java).apply {
+            val intent = Intent(this, AvangVpnService::class.java).apply {
                 putExtra("CONFIG_NAME", config.name)
                 putExtra("JSON_CONFIG", jsonConfig)
-            })
+            }
+            startService(intent)
             isConnected = true
             btnConnect.text = "قطع اتصال (${config.name})"
             tvStatus.text = "متصل به ${config.name} | پینگ: ${config.pingMs} ms"
