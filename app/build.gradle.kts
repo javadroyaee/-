@@ -11,8 +11,8 @@ android {
         applicationId = "ir.jrweb.avangvpn.pro"
         minSdk = 24
         targetSdk = 34
-        versionCode = 4
-        versionName = "2.2.0"
+        versionCode = 5
+        versionName = "2.2.1"
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
@@ -65,5 +65,4 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("com.google.zxing:core:3.5.3")
-    implementation("com.github.2dust:AndroidLibXrayLite:v1.8.24")
 }
