@@ -28,7 +28,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
-            android:text="Ø¢ÙˆÙ†Ú¯ ÙˆÛŒâ€ŒÙ¾ÛŒâ€ŒØ§Ù†"
+            android:text="@string/app_name"
             android:textColor="@color/pastel_white"
             android:textSize="20sp"
             android:textStyle="bold" />
@@ -53,7 +53,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
-                android:text="Ù…Ø¯Øª Ø¨Ø§Ù‚ÛŒâ€ŒÙ…Ø§Ù†Ø¯Ù‡: -- Ø±ÙˆØ²"
+                android:text="@string/sub_days_default"
                 android:textColor="@color/accent_pastel_orange"
                 android:textSize="13sp"
                 android:textStyle="bold" />
@@ -63,7 +63,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
-                android:text="Ú¯Ø±ÙˆÙ‡ Ø§Ø´ØªØ±Ø§Ú©: ÙØ¹Ø§Ù„"
+                android:text="@string/sub_title_default"
                 android:textColor="@color/pastel_white"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -88,7 +88,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
-                android:text="Ø­Ø¬Ù… Ø¨Ø§Ù‚ÛŒâ€ŒÙ…Ø§Ù†Ø¯Ù‡: -- Ú¯ÛŒÚ¯Ø§Ø¨Ø§ÛŒØª"
+                android:text="@string/sub_traffic_default"
                 android:textColor="@color/text_muted"
                 android:textSize="12sp" />
 
@@ -97,7 +97,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
-                android:text="ÙˆØ¶Ø¹ÛŒØª Ø§Ø´ØªØ±Ø§Ú©"
+                android:text="@string/sub_status_default"
                 android:textColor="@color/text_muted"
                 android:textSize="12sp" />
         </RelativeLayout>
@@ -107,7 +107,7 @@
         android:id="@+id/btnConnect"
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:text="Ø§ØªØµØ§Ù„ Ù‡ÙˆØ´Ù…Ù†Ø¯ (Ú©Ù…ØªØ±ÛŒÙ† Ù¾ÛŒÙ†Ú¯)"
+        android:text="@string/btn_smart_connect"
         android:textColor="@color/bg_navy_purple"
         android:textSize="15sp"
         android:textStyle="bold"
@@ -120,7 +120,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="Ø¢Ù…Ø§Ø¯Ù‡ Ø§ØªØµØ§Ù„"
+        android:text="@string/status_ready"
         android:textColor="@color/text_muted"
         android:textSize="12sp"
         android:layout_marginBottom="10dp" />
@@ -136,7 +136,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:paddingTop="6dp"
-        android:text="Ø·Ø±Ø§Ø­ÛŒ Ùˆ ØªÙˆØ³Ø¹Ù‡ Ø¨Ø¯Ø³Øª JRweb.ir"
+        android:text="@string/footer_credit"
         android:textColor="@color/text_muted"
         android:textSize="11sp" />
 </LinearLayout>
