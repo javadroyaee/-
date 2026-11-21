@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
@@ -29,7 +30,9 @@ class AvangVpnService : VpnService(), CoreCallbackHandler {
         val jsonConfig = intent?.getStringExtra("JSON_CONFIG") ?: return START_NOT_STICKY
 
         startForegroundNotification(configName)
-        startCoreTunnel(configName, jsonConfig)
+        Thread {
+            startCoreTunnel(configName, jsonConfig)
+        }.start()
         return START_STICKY
     }
 
@@ -49,36 +52,45 @@ class AvangVpnService : VpnService(), CoreCallbackHandler {
             .setContentTitle("آونگ وی‌پی‌ان متصل است")
             .setContentText("سرور فعال: $serverName")
             .setSmallIcon(android.R.drawable.ic_lock_lock)
+            .setOngoing(true)
             .build()
-        startForeground(101, notification)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(101, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        } else {
+            startForeground(101, notification)
+        }
     }
 
     private fun startCoreTunnel(serverName: String, jsonConfig: String) {
         try {
-            if (vpnInterface == null) {
-                val builder = Builder()
-                    .setSession("AvangVPN - $serverName")
-                    .setMtu(1500)
-                    .addAddress("10.0.0.2", 30)
-                    .addRoute("0.0.0.0", 0)
-                    .addDnsServer("1.1.1.1")
-                    .addDnsServer("8.8.8.8")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    builder.setMetered(false)
-                }
-                try {
-                    builder.addDisallowedApplication(packageName)
-                } catch (_: Exception) {
-                }
-                vpnInterface = builder.establish()
+            if (vpnInterface != null) {
+                vpnInterface?.close()
+                vpnInterface = null
             }
+
+            val builder = Builder()
+                .setSession("AvangVPN - $serverName")
+                .setMtu(1500)
+                .addAddress("26.26.26.1", 30)
+                .addRoute("0.0.0.0", 0)
+                .addDnsServer("1.1.1.1")
+                .addDnsServer("8.8.8.8")
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                builder.setMetered(false)
+            }
+            try {
+                builder.addDisallowedApplication(packageName)
+            } catch (_: Exception) {
+            }
+
+            vpnInterface = builder.establish()
+            val fd = vpnInterface?.fd ?: return
 
             coreController?.stopLoop()
             coreController = Libv2ray.newCoreController(this)
-            val tunFd = vpnInterface?.fd ?: 0
-            if (tunFd > 0) {
-                coreController?.startLoop(jsonConfig, tunFd)
-            }
+            coreController?.startLoop(jsonConfig, fd)
         } catch (e: Exception) {
             e.printStackTrace()
             stopVpn()
