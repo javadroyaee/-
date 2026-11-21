@@ -84,13 +84,7 @@ class AvangVpnService : VpnService(), CoreCallbackHandler {
         return 0
     }
 
-    override fun prepare(): Long = 0
-
-    override fun protect(l: Long): Boolean = protect(l.toInt())
-
     override fun onEmitStatus(l: Long, s: String?): Long = 0
-
-    override fun setup(s: String?): Long = 0
 
     override fun startup(): Long = 0
 
