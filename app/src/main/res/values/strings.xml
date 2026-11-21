@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">آونگ وی‌پی‌ان</string>
+    <string name="sub_days_default">مدت باقی‌مانده: -- روز</string>
+    <string name="sub_title_default">گروه اشتراک: فعال</string>
+    <string name="sub_traffic_default">حجم باقی‌مانده: -- گیگابایت</string>
+    <string name="sub_status_default">وضعیت اشتراک</string>
+    <string name="btn_smart_connect">اتصال هوشمند (کمترین پینگ)</string>
+    <string name="status_ready">آماده اتصال</string>
+    <string name="footer_credit">طراحی و توسعه بدست JRweb.ir</string>
+    <string name="qr_prompt">کد QR اشتراک یا کانفیگ را داخل کادر مربع قرار دهید</string>
+</resources>
