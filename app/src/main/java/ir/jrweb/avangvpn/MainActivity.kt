@@ -29,53 +29,81 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var btnAddMenu: ImageButton; lateinit var btnConnect: Button; lateinit var tvStatus: TextView
-    private lateinit var tvSubTitle: TextView; lateinit var tvSubDays: TextView; lateinit var tvSubTraffic: TextView
-    private lateinit var tvSubPercent: TextView; lateinit var timelineProgress: ProgressBar; lateinit var rvConfigs: RecyclerView
+    private lateinit var btnAddMenu: ImageButton
+    private lateinit var btnConnect: Button
+    private lateinit var tvStatus: TextView
+    private lateinit var tvSubTitle: TextView
+    private lateinit var tvSubDays: TextView
+    private lateinit var tvSubTraffic: TextView
+    private lateinit var tvSubPercent: TextView
+    private lateinit var timelineProgress: ProgressBar
+    private lateinit var rvConfigs: RecyclerView
 
-    private val configList = mutableListOf<VpnConfig>(); lateinit var adapter: ConfigAdapter
-    private var currentSub = SubscriptionInfo(); private var isConnected = false
+    private val configList = mutableListOf<VpnConfig>()
+    lateinit var adapter: ConfigAdapter
+    private var currentSub = SubscriptionInfo()
+    private var isConnected = false
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    private val client = OkHttpClient.Builder().connectTimeout(12, TimeUnit.SECONDS).readTimeout(12, TimeUnit.SECONDS).build()
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(12, TimeUnit.SECONDS)
+        .readTimeout(12, TimeUnit.SECONDS)
+        .build()
 
     private val vpnPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             configList.firstOrNull { it.isSelected }?.let { launchVpnService(it) }
         } else {
-            tvStatus.text = "Ø¯Ø³ØªØ±Ø³ÛŒ VPN ØªÙˆØ³Ø· Ú©Ø§Ø±Ø¨Ø± Ù„ØºÙˆ Ø´Ø¯"
+            tvStatus.text = "دسترسی VPN توسط کاربر لغو شد"
         }
     }
 
     private val qrLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        IntentIntegrator.parseActivityResult(result.resultCode, result.data)?.contents?.trim()?.takeIf { it.isNotEmpty() }?.let { handleImportedContent(it) }
+        IntentIntegrator.parseActivityResult(result.resultCode, result.data)?.contents?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            handleImportedContent(it)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        initViews(); setupRecyclerView(); loadSavedData(); setupListeners()
+        initViews()
+        setupRecyclerView()
+        loadSavedData()
+        setupListeners()
     }
 
     private fun initViews() {
-        btnAddMenu = findViewById(R.id.btnAddMenu); btnConnect = findViewById(R.id.btnConnect); tvStatus = findViewById(R.id.tvStatus)
-        tvSubTitle = findViewById(R.id.tvSubTitle); tvSubDays = findViewById(R.id.tvSubDays); tvSubTraffic = findViewById(R.id.tvSubTraffic)
-        tvSubPercent = findViewById(R.id.tvSubPercent); timelineProgress = findViewById(R.id.timelineProgress); rvConfigs = findViewById(R.id.rvConfigs)
+        btnAddMenu = findViewById(R.id.btnAddMenu)
+        btnConnect = findViewById(R.id.btnConnect)
+        tvStatus = findViewById(R.id.tvStatus)
+        tvSubTitle = findViewById(R.id.tvSubTitle)
+        tvSubDays = findViewById(R.id.tvSubDays)
+        tvSubTraffic = findViewById(R.id.tvSubTraffic)
+        tvSubPercent = findViewById(R.id.tvSubPercent)
+        timelineProgress = findViewById(R.id.timelineProgress)
+        rvConfigs = findViewById(R.id.rvConfigs)
     }
 
     private fun setupRecyclerView() {
         adapter = ConfigAdapter(configList) { selectedConfig ->
-            configList.forEach { it.isSelected = (it.id == selectedConfig.id) }; adapter.notifyDataSetChanged(); prepareAndStartVpn(selectedConfig)
+            configList.forEach { it.isSelected = (it.id == selectedConfig.id) }
+            adapter.notifyDataSetChanged()
+            prepareAndStartVpn(selectedConfig)
         }
-        rvConfigs.layoutManager = LinearLayoutManager(this); rvConfigs.adapter = adapter
+        rvConfigs.layoutManager = LinearLayoutManager(this)
+        rvConfigs.adapter = adapter
     }
 
     private fun setupListeners() {
         btnAddMenu.setOnClickListener { view ->
             val popup = PopupMenu(this, view)
-            popup.menu.add(0, 1, 0, "ðŸ“‹ Ú©Ù¾ÛŒ Ø§Ø² Ú©Ù„ÛŒÙ¾â€ŒØ¨ÙˆØ±Ø¯")
-            popup.menu.add(0, 2, 1, "ðŸ“· Ø§Ø³Ú©Ù† Ú©ÛŒÙˆâ€ŒØ¢Ø± Ú©Ø¯ (QR)")
+            popup.menu.add(0, 1, 0, "📋 کپی از کلیپ‌بورد")
+            popup.menu.add(0, 2, 1, "📷 اسکن کیو‌آر کد (QR)")
             popup.setOnMenuItemClickListener { item ->
-                when (item.itemId) { 1 -> importFromClipboard(); 2 -> startQrScanner() }
+                when (item.itemId) {
+                    1 -> importFromClipboard()
+                    2 -> startQrScanner()
+                }
                 true
             }
             popup.show()
@@ -85,14 +113,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun importFromClipboard() {
         (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip?.getItemAt(0)?.text?.toString()?.trim()?.run {
-            if (isNotEmpty()) handleImportedContent(this) else Toast.makeText(this@MainActivity, "Ú©Ù„ÛŒÙ¾â€ŒØ¨ÙˆØ±Ø¯ Ø®Ø§Ù„ÛŒ Ø§Ø³Øª!", Toast.LENGTH_SHORT).show()
-        } ?: Toast.makeText(this, "Ú©Ù„ÛŒÙ¾â€ŒØ¨ÙˆØ±Ø¯ Ø®Ø§Ù„ÛŒ Ø§Ø³Øª!", Toast.LENGTH_SHORT).show()
+            if (isNotEmpty()) handleImportedContent(this)
+            else Toast.makeText(this@MainActivity, "کلیپ‌بورد خالی است!", Toast.LENGTH_SHORT).show()
+        } ?: Toast.makeText(this, "کلیپ‌بورد خالی است!", Toast.LENGTH_SHORT).show()
     }
 
     private fun startQrScanner() {
         val integrator = IntentIntegrator(this).apply {
+            captureActivity = PortraitCaptureActivity::class.java
             setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
-            setPrompt("Ú©Ø¯ QR Ø§Ø´ØªØ±Ø§Ú© ÛŒØ§ Ú©Ø§Ù†ÙÛŒÚ¯ Ø±Ø§ Ø¯Ø§Ø®Ù„ Ù…Ø±Ø¨Ø¹ Ù‚Ø±Ø§Ø± Ø¯Ù‡ÛŒØ¯")
             setBeepEnabled(true)
             setOrientationLocked(true)
         }
@@ -101,35 +130,57 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleImportedContent(rawText: String) {
         if (rawText.startsWith("http://") || rawText.startsWith("https://")) {
-            currentSub.url = rawText; saveSubUrl(rawText)
-            scope.launch { tvStatus.text = "Ø¯Ø± Ø­Ø§Ù„ Ø¯Ø±ÛŒØ§ÙØª Ø§Ø·Ù„Ø§Ø¹Ø§Øª Ú¯Ø±ÙˆÙ‡ Ø§Ø´ØªØ±Ø§Ú©..."; updateSubscription(rawText); pingAllConfigs() }
+            currentSub.url = rawText
+            saveSubUrl(rawText)
+            scope.launch {
+                tvStatus.text = "در حال دریافت اطلاعات گروه اشتراک..."
+                updateSubscription(rawText)
+                pingAllConfigs()
+            }
         } else {
             val parsed = parseMultiLineConfigs(rawText)
             if (parsed.isNotEmpty()) {
-                configList.clear(); configList.addAll(parsed); saveConfigsLocal(); adapter.notifyDataSetChanged()
+                configList.clear()
+                configList.addAll(parsed)
+                saveConfigsLocal()
+                adapter.notifyDataSetChanged()
                 scope.launch { pingAllConfigs() }
-            } else Toast.makeText(this, "ÙØ±Ù…Øª Ù„ÛŒÙ†Ú© Ù…Ø¹ØªØ¨Ø± Ù†ÛŒØ³Øª", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "فرمت لینک معتبر نیست", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
     private fun smartConnectFlow() {
         scope.launch {
             btnConnect.isEnabled = false
-            if (currentSub.url.isNotEmpty()) { tvStatus.text = "Û±/Û³ Ø¯Ø± Ø­Ø§Ù„ Ø¨Ù‡â€ŒØ±ÙˆØ²Ø±Ø³Ø§Ù†ÛŒ Ù„ÛŒÙ†Ú©â€ŒÙ‡Ø§ÛŒ Ø§Ø´ØªØ±Ø§Ú©..."; updateSubscription(currentSub.url) }
-            if (configList.isEmpty()) { tvStatus.text = "Ù‡ÛŒÚ† Ú©Ø§Ù†ÙÛŒÚ¯ÛŒ ÛŒØ§ÙØª Ù†Ø´Ø¯. Ø§Ø² Ù…Ù†ÙˆÛŒ + Ø§Ø¶Ø§ÙÙ‡ Ú©Ù†ÛŒØ¯."; btnConnect.isEnabled = true; return@launch }
-            tvStatus.text = "Û²/Û³ Ø¯Ø± Ø­Ø§Ù„ Ú¯Ø±ÙØªÙ† Ù¾ÛŒÙ†Ú¯ Ø³Ø±ÙˆØ±Ù‡Ø§..."; pingAllConfigs()
+            if (currentSub.url.isNotEmpty()) {
+                tvStatus.text = "۱/۳ در حال به‌روزرسانی لینک‌های اشتراک..."
+                updateSubscription(currentSub.url)
+            }
+            if (configList.isEmpty()) {
+                tvStatus.text = "هیچ کانفیگی یافت نشد. از منوی + اضافه کنید."
+                btnConnect.isEnabled = true
+                return@launch
+            }
+            tvStatus.text = "۲/۳ در حال گرفتن پینگ سرورها..."
+            pingAllConfigs()
             val bestConfig = configList.filter { it.pingMs in 1..4999 }.minByOrNull { it.pingMs }
             if (bestConfig != null) {
-                configList.forEach { it.isSelected = (it.id == bestConfig.id) }; adapter.notifyDataSetChanged()
-                tvStatus.text = "Û³/Û³ Ø¯Ø± Ø­Ø§Ù„ Ø§ØªØµØ§Ù„ Ø¨Ù‡ Ø³Ø±ÛŒØ¹â€ŒØªØ±ÛŒÙ† Ø³Ø±ÙˆØ± (${bestConfig.pingMs}ms)..."; prepareAndStartVpn(bestConfig)
-            } else tvStatus.text = "Ù¾Ø§Ø³Ø®ÛŒ Ø§Ø² Ø³Ø±ÙˆØ±Ù‡Ø§ Ø¯Ø±ÛŒØ§ÙØª Ù†Ø´Ø¯!"
+                configList.forEach { it.isSelected = (it.id == bestConfig.id) }
+                adapter.notifyDataSetChanged()
+                tvStatus.text = "۳/۳ در حال اتصال به سریع‌ترین سرور (${bestConfig.pingMs}ms)..."
+                prepareAndStartVpn(bestConfig)
+            } else {
+                tvStatus.text = "پاسخی از سرورها دریافت نشد!"
+            }
             btnConnect.isEnabled = true
         }
     }
 
     private suspend fun updateSubscription(subUrl: String) = withContext(Dispatchers.IO) {
         try {
-            val request = Request.Builder().url(subUrl).header("User-Agent", "AvangVPN/1.0").build()
+            val request = Request.Builder().url(subUrl).header("User-Agent", "AvangVPN/2.1").build()
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@use
                 parseSubscriptionUserInfo(response.header("Subscription-Userinfo") ?: "")
@@ -138,11 +189,18 @@ class MainActivity : AppCompatActivity() {
                 } ?: ""
                 val parsedConfigs = parseMultiLineConfigs(decoded)
                 withContext(Dispatchers.Main) {
-                    if (parsedConfigs.isNotEmpty()) { configList.clear(); configList.addAll(parsedConfigs); saveConfigsLocal(); adapter.notifyDataSetChanged() }
+                    if (parsedConfigs.isNotEmpty()) {
+                        configList.clear()
+                        configList.addAll(parsedConfigs)
+                        saveConfigsLocal()
+                        adapter.notifyDataSetChanged()
+                    }
                     updateTimelineUI()
                 }
             }
-        } catch (e: Exception) { withContext(Dispatchers.Main) { tvStatus.text = "Ø®Ø·Ø§ Ø¯Ø± Ø¢Ù¾Ø¯ÛŒØª Ø§Ø´ØªØ±Ø§Ú©: ${e.localizedMessage}" } }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) { tvStatus.text = "خطا در آپدیت اشتراک: ${e.localizedMessage}" }
+        }
     }
 
     private fun parseSubscriptionUserInfo(header: String) {
@@ -158,20 +216,25 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        currentSub.usedBytes = upload + download; currentSub.totalBytes = total; currentSub.expireTimestamp = expire
+        currentSub.usedBytes = upload + download
+        currentSub.totalBytes = total
+        currentSub.expireTimestamp = expire
     }
 
     private fun updateTimelineUI() {
-        val totalGb = currentSub.totalBytes / (1024.0 * 1024.0 * 1024.0); val usedGb = currentSub.usedBytes / (1024.0 * 1024.0 * 1024.0)
+        val totalGb = currentSub.totalBytes / (1024.0 * 1024.0 * 1024.0)
+        val usedGb = currentSub.usedBytes / (1024.0 * 1024.0 * 1024.0)
         val remainGb = (totalGb - usedGb).coerceAtLeast(0.0)
         val percent = if (totalGb > 0) ((remainGb / totalGb) * 100).toInt().coerceIn(0, 100) else 100
         timelineProgress.progress = percent
-        tvSubTraffic.text = if (totalGb > 0) String.format("Ø­Ø¬Ù… Ø¨Ø§Ù‚ÛŒâ€ŒÙ…Ø§Ù†Ø¯Ù‡: %.1f Ø§Ø² %.1f Ú¯ÛŒÚ¯", remainGb, totalGb) else "Ø­Ø¬Ù… Ø¨Ø§Ù‚ÛŒâ€ŒÙ…Ø§Ù†Ø¯Ù‡: Ù†Ø§Ù…Ø­Ø¯ÙˆØ¯"
+        tvSubTraffic.text = if (totalGb > 0) String.format("حجم باقی‌مانده: %.1f از %.1f گیگ", remainGb, totalGb) else "حجم باقی‌مانده: نامحدود"
         if (currentSub.expireTimestamp > 0) {
             val remainDays = ((currentSub.expireTimestamp - (System.currentTimeMillis() / 1000L)) / 86400L).coerceAtLeast(0L)
-            tvSubDays.text = "Ù…Ø¯Øª Ø¨Ø§Ù‚ÛŒâ€ŒÙ…Ø§Ù†Ø¯Ù‡: $remainDays Ø±ÙˆØ²"
-        } else tvSubDays.text = "Ù…Ø¯Øª Ø¨Ø§Ù‚ÛŒâ€ŒÙ…Ø§Ù†Ø¯Ù‡: Ù†Ø§Ù…Ø­Ø¯ÙˆØ¯"
-        tvSubPercent.text = "$percent% Ø¨Ø§Ù‚ÛŒâ€ŒÙ…Ø§Ù†Ø¯Ù‡"
+            tvSubDays.text = "مدت باقی‌مانده: $remainDays روز"
+        } else {
+            tvSubDays.text = "مدت باقی‌مانده: نامحدود"
+        }
+        tvSubPercent.text = "$percent% باقی‌مانده"
     }
 
     private fun parseMultiLineConfigs(raw: String): List<VpnConfig> {
@@ -190,7 +253,8 @@ class MainActivity : AppCompatActivity() {
         return try {
             when {
                 uriStr.startsWith("vless://") || uriStr.startsWith("trojan://") -> {
-                    val proto = uriStr.substringBefore("://").uppercase(); val uri = URI(uriStr)
+                    val proto = uriStr.substringBefore("://").uppercase()
+                    val uri = URI(uriStr)
                     val name = uri.fragment?.let { URLDecoder.decode(it, "UTF-8") } ?: "$proto Server"
                     VpnConfig(UUID.randomUUID().toString(), name, proto, uri.host ?: "", if (uri.port > 0) uri.port else 443, uriStr)
                 }
@@ -237,48 +301,92 @@ class MainActivity : AppCompatActivity() {
         try {
             val jsonConfig = ConfigConverter.buildXrayConfig(config)
             ContextCompat.startForegroundService(this, Intent(this, AvangVpnService::class.java).apply {
-                putExtra("CONFIG_NAME", config.name); putExtra("JSON_CONFIG", jsonConfig)
+                putExtra("CONFIG_NAME", config.name)
+                putExtra("JSON_CONFIG", jsonConfig)
             })
-            isConnected = true; btnConnect.text = "Ù‚Ø·Ø¹ Ø§ØªØµØ§Ù„ (${config.name})"; tvStatus.text = "Ù…ØªØµÙ„ Ø¨Ù‡ ${config.name} | Ù¾ÛŒÙ†Ú¯: ${config.pingMs} ms"
-        } catch (e: Exception) { tvStatus.text = "Ø®Ø·Ø§ Ø¯Ø± Ø§Ø¬Ø±Ø§ÛŒ Ù‡Ø³ØªÙ‡: ${e.localizedMessage}" }
+            isConnected = true
+            btnConnect.text = "قطع اتصال (${config.name})"
+            tvStatus.text = "متصل به ${config.name} | پینگ: ${config.pingMs} ms"
+        } catch (e: Exception) {
+            tvStatus.text = "خطا در اجرای هسته: ${e.localizedMessage}"
+        }
     }
 
     private fun disconnectVpn() {
         startService(Intent(this, AvangVpnService::class.java).apply { action = "STOP_VPN" })
-        isConnected = false; btnConnect.text = "Ø§ØªØµØ§Ù„ Ù‡ÙˆØ´Ù…Ù†Ø¯ (Ú©Ù…ØªØ±ÛŒÙ† Ù¾ÛŒÙ†Ú¯)"; tvStatus.text = "Ø§ØªØµØ§Ù„ Ù‚Ø·Ø¹ Ø´Ø¯"
+        isConnected = false
+        btnConnect.text = getString(R.string.btn_smart_connect)
+        tvStatus.text = "اتصال قطع شد"
     }
 
-    private fun saveSubUrl(url: String) { getSharedPreferences("avang_prefs", Context.MODE_PRIVATE).edit().putString("sub_url", url).apply() }
-    private fun saveConfigsLocal() { getSharedPreferences("avang_prefs", Context.MODE_PRIVATE).edit().putString("saved_configs", configList.joinToString("\n") { it.rawUri }).apply() }
+    private fun saveSubUrl(url: String) {
+        getSharedPreferences("avang_prefs", Context.MODE_PRIVATE).edit().putString("sub_url", url).apply()
+    }
+
+    private fun saveConfigsLocal() {
+        getSharedPreferences("avang_prefs", Context.MODE_PRIVATE).edit().putString("saved_configs", configList.joinToString("\n") { it.rawUri }).apply()
+    }
+
     private fun loadSavedData() {
         val prefs = getSharedPreferences("avang_prefs", Context.MODE_PRIVATE)
         currentSub.url = prefs.getString("sub_url", "") ?: ""
-        prefs.getString("saved_configs", "")?.takeIf { it.isNotEmpty() }?.let { configList.addAll(parseMultiLineConfigs(it)); adapter.notifyDataSetChanged() }
+        prefs.getString("saved_configs", "")?.takeIf { it.isNotEmpty() }?.let {
+            configList.addAll(parseMultiLineConfigs(it))
+            adapter.notifyDataSetChanged()
+        }
     }
 
     inner class ConfigAdapter(private val items: List<VpnConfig>, private val onClick: (VpnConfig) -> Unit) : RecyclerView.Adapter<ConfigAdapter.Holder>() {
         inner class Holder(val root: LinearLayout, val tvName: TextView, val tvProto: TextView, val tvPing: TextView) : RecyclerView.ViewHolder(root)
+
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
             val row = LinearLayout(parent.context).apply {
-                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(36, 28, 36, 28)
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(36, 28, 36, 28)
                 background = ContextCompat.getDrawable(context, R.drawable.bg_card_pastel)
                 layoutParams = ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 18 }
             }
-            val tvPing = TextView(parent.context).apply { textSize = 13f; setTextColor(ContextCompat.getColor(context, R.color.ping_green)); setTypeface(null, android.graphics.Typeface.BOLD) }
-            val infoBox = LinearLayout(parent.context).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.END; layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) }
-            val tvName = TextView(parent.context).apply { textSize = 14f; setTextColor(ContextCompat.getColor(context, R.color.pastel_white)); setTypeface(null, android.graphics.Typeface.BOLD) }
-            val tvProto = TextView(parent.context).apply { textSize = 11f; setTextColor(ContextCompat.getColor(context, R.color.accent_pastel_orange)) }
-            infoBox.addView(tvName); infoBox.addView(tvProto); row.addView(tvPing); row.addView(infoBox)
+            val tvPing = TextView(parent.context).apply {
+                textSize = 13f
+                setTextColor(ContextCompat.getColor(context, R.color.ping_green))
+                setTypeface(null, android.graphics.Typeface.BOLD)
+            }
+            val infoBox = LinearLayout(parent.context).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.END
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            val tvName = TextView(parent.context).apply {
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(context, R.color.pastel_white))
+                setTypeface(null, android.graphics.Typeface.BOLD)
+            }
+            val tvProto = TextView(parent.context).apply {
+                textSize = 11f
+                setTextColor(ContextCompat.getColor(context, R.color.accent_pastel_orange))
+            }
+            infoBox.addView(tvName)
+            infoBox.addView(tvProto)
+            row.addView(tvPing)
+            row.addView(infoBox)
             return Holder(row, tvName, tvProto, tvPing)
         }
+
         override fun onBindViewHolder(holder: Holder, position: Int) {
             val item = items[position]
-            holder.tvName.text = item.name; holder.tvProto.text = "${item.protocol} â€¢ ${item.host}"
-            holder.tvPing.text = when { item.pingMs > 0 -> "${item.pingMs} ms"; item.pingMs == -1 -> "ØªØ³Øª Ù†Ø´Ø¯Ù‡"; else -> "ØªØ§ÛŒÙ…â€ŒØ§ÙˆØª" }
+            holder.tvName.text = item.name
+            holder.tvProto.text = "${item.protocol} • ${item.host}"
+            holder.tvPing.text = when {
+                item.pingMs > 0 -> "${item.pingMs} ms"
+                item.pingMs == -1 -> "تست نشده"
+                else -> "تایم‌اوت"
+            }
             holder.tvPing.setTextColor(if (item.pingMs > 0) ContextCompat.getColor(this@MainActivity, R.color.ping_green) else Color.parseColor("#F87171"))
             holder.root.alpha = if (item.isSelected) 1.0f else 0.88f
             holder.root.setOnClickListener { onClick(item) }
         }
+
         override fun getItemCount(): Int = items.size
     }
 }
