@@ -62,6 +62,10 @@ class AvangVpnService : VpnService(), CoreCallbackHandler {
                     .addAddress("10.0.0.2", 30)
                     .addRoute("0.0.0.0", 0)
                     .addDnsServer("1.1.1.1")
+                    .addDnsServer("8.8.8.8")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    builder.setMetered(false)
+                }
                 try {
                     builder.addDisallowedApplication(packageName)
                 } catch (_: Exception) {
@@ -72,7 +76,9 @@ class AvangVpnService : VpnService(), CoreCallbackHandler {
             coreController?.stopLoop()
             coreController = Libv2ray.newCoreController(this)
             val tunFd = vpnInterface?.fd ?: 0
-            coreController?.startLoop(jsonConfig, tunFd)
+            if (tunFd > 0) {
+                coreController?.startLoop(jsonConfig, tunFd)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             stopVpn()
