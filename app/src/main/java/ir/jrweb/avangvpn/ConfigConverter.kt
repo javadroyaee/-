@@ -18,14 +18,42 @@ object ConfigConverter {
         }
         return JSONObject().apply {
             put("log", JSONObject().put("loglevel", "warning"))
-            put("dns", JSONObject().put("servers", JSONArray().put("1.1.1.1").put("8.8.8.8")))
+            put("dns", JSONObject().apply {
+                put("servers", JSONArray().put("1.1.1.1").put("8.8.8.8"))
+            })
             put("inbounds", JSONArray().apply {
                 put(JSONObject().apply {
-                    put("tag", "socks").put("port", 10808).put("listen", "127.0.0.1").put("protocol", "socks")
-                    put("settings", JSONObject().put("udp", true))
+                    put("tag", "socks")
+                    put("port", 10808)
+                    put("listen", "127.0.0.1")
+                    put("protocol", "socks")
+                    put("settings", JSONObject().put("auth", "noauth").put("udp", true))
+                    put("sniffing", JSONObject().apply {
+                        put("enabled", true)
+                        put("destOverride", JSONArray().put("http").put("tls"))
+                    })
+                })
+                put(JSONObject().apply {
+                    put("tag", "http")
+                    put("port", 10809)
+                    put("listen", "127.0.0.1")
+                    put("protocol", "http")
                 })
             })
-            put("outbounds", JSONArray().apply { put(outbound); put(JSONObject().put("tag", "direct").put("protocol", "freedom")) })
+            put("outbounds", JSONArray().apply {
+                put(outbound)
+                put(JSONObject().put("tag", "direct").put("protocol", "freedom"))
+            })
+            put("routing", JSONObject().apply {
+                put("domainStrategy", "IPIfNonMatch")
+                put("rules", JSONArray().apply {
+                    put(JSONObject().apply {
+                        put("type", "field")
+                        put("ip", JSONArray().put("geoip:private"))
+                        put("outboundTag", "direct")
+                    })
+                })
+            })
         }.toString(2)
     }
 
@@ -45,14 +73,18 @@ object ConfigConverter {
         val uri = URI(uriStr)
         val params = parseQuery(uri.rawQuery)
         val userObj = JSONObject().apply {
-            put("id", uri.userInfo ?: "").put("encryption", params["encryption"] ?: "none")
+            put("id", uri.userInfo ?: "")
+            put("encryption", params["encryption"] ?: "none")
             params["flow"]?.takeIf { it.isNotEmpty() }?.let { put("flow", it) }
         }
         val vnextObj = JSONObject().apply {
-            put("address", uri.host ?: "").put("port", if (uri.port > 0) uri.port else 443).put("users", JSONArray().put(userObj))
+            put("address", uri.host ?: "")
+            put("port", if (uri.port > 0) uri.port else 443)
+            put("users", JSONArray().put(userObj))
         }
         return JSONObject().apply {
-            put("tag", "proxy").put("protocol", "vless")
+            put("tag", "proxy")
+            put("protocol", "vless")
             put("settings", JSONObject().put("vnext", JSONArray().put(vnextObj)))
             put("streamSettings", buildStreamSettings(params, uri.host ?: ""))
         }
@@ -62,10 +94,13 @@ object ConfigConverter {
         val uri = URI(uriStr)
         val params = parseQuery(uri.rawQuery)
         val serverObj = JSONObject().apply {
-            put("address", uri.host ?: "").put("port", if (uri.port > 0) uri.port else 443).put("password", uri.userInfo ?: "")
+            put("address", uri.host ?: "")
+            put("port", if (uri.port > 0) uri.port else 443)
+            put("password", uri.userInfo ?: "")
         }
         return JSONObject().apply {
-            put("tag", "proxy").put("protocol", "trojan")
+            put("tag", "proxy")
+            put("protocol", "trojan")
             put("settings", JSONObject().put("servers", JSONArray().put(serverObj)))
             put("streamSettings", buildStreamSettings(params, uri.host ?: ""))
         }
@@ -75,18 +110,25 @@ object ConfigConverter {
         val b64 = uriStr.removePrefix("vmess://")
         val json = JSONObject(String(Base64.decode(b64, Base64.DEFAULT)))
         val userObj = JSONObject().apply {
-            put("id", json.optString("id")).put("alterId", json.optInt("aid", 0)).put("security", json.optString("scy", "auto"))
+            put("id", json.optString("id"))
+            put("alterId", json.optInt("aid", 0))
+            put("security", json.optString("scy", "auto"))
         }
         val vnextObj = JSONObject().apply {
-            put("address", json.optString("add")).put("port", json.optInt("port", 443)).put("users", JSONArray().put(userObj))
+            put("address", json.optString("add"))
+            put("port", json.optInt("port", 443))
+            put("users", JSONArray().put(userObj))
         }
         val params = mapOf(
-            "type" to json.optString("net", "tcp"), "host" to json.optString("host", ""),
-            "path" to json.optString("path", "/"), "security" to json.optString("tls", ""),
+            "type" to json.optString("net", "tcp"),
+            "host" to json.optString("host", ""),
+            "path" to json.optString("path", "/"),
+            "security" to json.optString("tls", ""),
             "sni" to json.optString("sni", json.optString("host", ""))
         )
         return JSONObject().apply {
-            put("tag", "proxy").put("protocol", "vmess")
+            put("tag", "proxy")
+            put("protocol", "vmess")
             put("settings", JSONObject().put("vnext", JSONArray().put(vnextObj)))
             put("streamSettings", buildStreamSettings(params, json.optString("add")))
         }
@@ -98,10 +140,14 @@ object ConfigConverter {
         val method = decoded.substringBefore(":", "aes-256-gcm")
         val pass = decoded.substringAfter(":", "")
         val serverObj = JSONObject().apply {
-            put("address", uri.host ?: "").put("port", if (uri.port > 0) uri.port else 8388).put("method", method).put("password", pass)
+            put("address", uri.host ?: "")
+            put("port", if (uri.port > 0) uri.port else 8388)
+            put("method", method)
+            put("password", pass)
         }
         return JSONObject().apply {
-            put("tag", "proxy").put("protocol", "shadowsocks")
+            put("tag", "proxy")
+            put("protocol", "shadowsocks")
             put("settings", JSONObject().put("servers", JSONArray().put(serverObj)))
         }
     }
@@ -124,9 +170,12 @@ object ConfigConverter {
             pubKey = params["publickey"] ?: ""; endpoint = "${uri.host}:${if (uri.port > 0) uri.port else 51820}"
         }
         return JSONObject().apply {
-            put("tag", "proxy").put("protocol", "wireguard")
+            put("tag", "proxy")
+            put("protocol", "wireguard")
             put("settings", JSONObject().apply {
-                put("secretKey", privKey).put("address", JSONArray().put(localAddr)).put("peers", JSONArray().put(JSONObject().put("publicKey", pubKey).put("endpoint", endpoint)))
+                put("secretKey", privKey)
+                put("address", JSONArray().put(localAddr))
+                put("peers", JSONArray().put(JSONObject().put("publicKey", pubKey).put("endpoint", endpoint)))
             })
         }
     }
